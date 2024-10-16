@@ -9,10 +9,10 @@
   ];
 
   const events = [
-    { id: 1, resourceId: 1, title: 'Task 1', start: '2023-04-10T09:00:00', end: '2023-04-10T10:30:00' },
-    { id: 2, resourceId: 2, title: 'Meeting', start: '2023-04-10T13:00:00', end: '2023-04-10T14:00:00' },
-    { id: 3, resourceId: 3, title: 'Project A', start: '2023-04-10T11:00:00', end: '2023-04-10T15:00:00' },
-    { id: 4, resourceId: 4, title: 'Break', start: '2023-04-10T12:00:00', end: '2023-04-10T13:00:00' },
+    { id: 1, resourceId: 1, title: 'Task 1', start: '2023-10-16T09:00:00', end: '2023-10-16T10:30:00' },
+    { id: 2, resourceId: 2, title: 'Meeting', start: '2023-10-16T13:00:00', end: '2023-10-16T14:00:00' },
+    { id: 3, resourceId: 3, title: 'Project A', start: '2023-10-16T11:00:00', end: '2023-10-16T15:00:00' },
+    { id: 4, resourceId: 4, title: 'Break', start: '2023-10-16T12:00:00', end: '2023-10-16T13:00:00' },
   ];
 </script>
 
@@ -25,6 +25,7 @@
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
+    background: #ffffff;
   }
 
   main {

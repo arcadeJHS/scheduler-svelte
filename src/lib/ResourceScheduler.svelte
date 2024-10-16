@@ -4,127 +4,165 @@
   export let resources = [];
   export let events = [];
 
-  let schedulerElement;
-  let currentDate = new Date();
+  let currentDate = new Date(2023, 9, 16); // Use local time
   let draggedEvent = null;
+  let resizingEvent = null;
+  let resizeDirection = null;
+  let initialX = 0;
 
-  $: formattedDate = currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const startHour = 7;
+  const endHour = 19;
+  const intervals = (endHour - startHour) * 2;
 
-  function renderScheduler() {
-    if (!schedulerElement) return;
+  $: formattedDate = currentDate.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    month: 'long', 
+    day: 'numeric', 
+    year: 'numeric'
+    // Removed timeZone: 'UTC'
+  });
 
-    const startHour = 7;
-    const endHour = 19;
-    const intervals = (endHour - startHour) * 2;
+  $: timeSlots = Array.from({ length: intervals }, (_, i) => {
+    const hour = Math.floor(i / 2) + startHour;
+    const minute = i % 2 === 0 ? '00' : '30';
+    return `${hour.toString().padStart(2, '0')}:${minute}`;
+  });
 
-    let html = `<div class="scheduler-header">
-      <div class="scheduler-time-column">Resource</div>
-      ${Array.from({ length: intervals }, (_, i) => {
-        const hour = Math.floor(i / 2) + startHour;
-        const minute = i % 2 === 0 ? '00' : '30';
-        return `<div class="scheduler-time">${hour.toString().padStart(2, '0')}:${minute}</div>`;
-      }).join('')}
-    </div>`;
-
-    html += '<div class="scheduler-body">';
-
-    resources.forEach(resource => {
-      html += `<div class="scheduler-row">
-        <div class="scheduler-resource">${resource.name}</div>`;
-      for (let i = 0; i < intervals; i++) {
-        const hour = Math.floor(i / 2) + startHour;
-        const minute = i % 2 === 0 ? '00' : '30';
-        html += `<div class="scheduler-cell" data-resource="${resource.id}" data-time="${hour}:${minute}"></div>`;
-      }
-      html += '</div>';
-    });
-
-    html += '</div>';
-
-    schedulerElement.innerHTML = html;
-
-    events.forEach(event => {
+  $: visibleEvents = events
+    .filter(event => {
+      const eventDate = new Date(event.start);
+      return eventDate.getFullYear() === currentDate.getFullYear() &&
+             eventDate.getMonth() === currentDate.getMonth() &&
+             eventDate.getDate() === currentDate.getDate();
+    })
+    .map(event => {
       const startDate = new Date(event.start);
       const endDate = new Date(event.end);
-      const startTime = startDate.getHours() + startDate.getMinutes() / 60;
-      const endTime = endDate.getHours() + endDate.getMinutes() / 60;
+      
+      const startTime = (startDate.getHours() - startHour) * 2 + startDate.getMinutes() / 30;
+      const endTime = (endDate.getHours() - startHour) * 2 + endDate.getMinutes() / 30;
 
-      if (startTime >= startHour && startTime < endHour) {
-        const cell = schedulerElement.querySelector(`.scheduler-cell[data-resource="${event.resourceId}"][data-time="${Math.floor(startTime)}:${startTime % 1 === 0 ? '00' : '30'}"]`);
+      const left = Math.max(0, startTime * 40); // 30 minutes = 40px
+      const width = Math.max(0, (endTime - startTime) * 40);
 
-        if (cell) {
-          const eventElement = document.createElement('div');
-          eventElement.className = 'scheduler-event';
-          eventElement.style.width = `${(endTime - startTime) * 80}px`;
-          eventElement.textContent = event.title;
-          eventElement.draggable = true;
-          eventElement.setAttribute('data-event-id', event.id);
-          eventElement.addEventListener('dragstart', onDragStart);
-          cell.appendChild(eventElement);
-        }
-      }
+      return { ...event, left, width };
     });
 
-    schedulerElement.querySelectorAll('.scheduler-cell').forEach(cell => {
-      cell.addEventListener('dragover', onDragOver);
-      cell.addEventListener('drop', onDrop);
-    });
+  function onEventMouseDown(event, e) {
+    if (e.target.classList.contains('resize-handle')) {
+      e.preventDefault();
+      e.stopPropagation();
+      resizingEvent = event;
+      resizeDirection = e.target.classList.contains('left') ? 'left' : 'right';
+      initialX = e.clientX;
+      document.addEventListener('mousemove', onResize);
+      document.addEventListener('mouseup', onResizeEnd);
+    }
   }
 
-  function onDragStart(e) {
-    const eventElement = e.target.closest('.scheduler-event');
-    if (eventElement) {
-      draggedEvent = events.find(event => event.id === parseInt(eventElement.getAttribute('data-event-id')));
-      e.dataTransfer.setData('text/plain', eventElement.getAttribute('data-event-id'));
+  function onResize(e) {
+    if (!resizingEvent) return;
+
+    const delta = e.clientX - initialX;
+    const cellWidth = 40; // 30 minutes = 40px
+    const timeChange = Math.round(delta / cellWidth) * 30 * 60 * 1000; // Convert to milliseconds
+
+    let newStart = new Date(resizingEvent.start);
+    let newEnd = new Date(resizingEvent.end);
+
+    if (resizeDirection === 'left') {
+      newStart = new Date(newStart.getTime() + timeChange);
+      newStart.setHours(Math.max(newStart.getHours(), startHour), newStart.getMinutes());
+    } else {
+      newEnd = new Date(newEnd.getTime() + timeChange);
+      newEnd.setHours(Math.min(newEnd.getHours(), endHour), newEnd.getMinutes());
     }
+
+    // Ensure the event duration is at least 30 minutes
+    if (newEnd.getTime() - newStart.getTime() >= 30 * 60 * 1000) {
+      const updatedEvent = {
+        ...resizingEvent,
+        start: newStart.toISOString(),
+        end: newEnd.toISOString()
+      };
+      events = events.map(event => event.id === updatedEvent.id ? updatedEvent : event);
+      initialX = e.clientX;
+    }
+  }
+
+  function onResizeEnd() {
+    resizingEvent = null;
+    resizeDirection = null;
+    document.removeEventListener('mousemove', onResize);
+    document.removeEventListener('mouseup', onResizeEnd);
+  }
+
+  function onDragStart(event, e) {
+    if (e.target.classList.contains('resize-handle')) {
+      e.preventDefault();
+      return;
+    }
+    draggedEvent = event;
+    e.dataTransfer.setData('text/plain', event.id.toString());
   }
 
   function onDragOver(e) {
     e.preventDefault();
   }
 
-  function onDrop(e) {
+  function onDrop(resourceId, time, e) {
     e.preventDefault();
     const eventId = parseInt(e.dataTransfer.getData('text'));
-    const targetCell = e.target.closest('.scheduler-cell');
 
-    if (targetCell && draggedEvent) {
-      const newResourceId = parseInt(targetCell.getAttribute('data-resource'));
-      const [newHour, newMinute] = targetCell.getAttribute('data-time').split(':');
-
-      const newStartDate = new Date(draggedEvent.start);
-      newStartDate.setHours(parseInt(newHour));
-      newStartDate.setMinutes(parseInt(newMinute));
+    if (draggedEvent && draggedEvent.id === eventId) {
+      const [newHour, newMinute] = time.split(':').map(Number);
+      
+      let newStart = new Date(draggedEvent.start);
+      newStart.setHours(newHour, newMinute, 0, 0);
 
       const duration = new Date(draggedEvent.end).getTime() - new Date(draggedEvent.start).getTime();
-      const newEndDate = new Date(newStartDate.getTime() + duration);
+      let newEnd = new Date(newStart.getTime() + duration);
 
-      const updatedEvent = {
-        ...draggedEvent,
-        resourceId: newResourceId,
-        start: newStartDate.toISOString(),
-        end: newEndDate.toISOString()
-      };
+      // Ensure the event stays within the valid time range
+      if (newStart.getHours() >= startHour && newEnd.getHours() <= endHour) {
+        const updatedEvent = {
+          ...draggedEvent,
+          resourceId,
+          start: newStart.toISOString(),
+          end: newEnd.toISOString()
+        };
 
-      events = events.map(event => event.id === updatedEvent.id ? updatedEvent : event);
-      renderScheduler();
+        events = events.map(event => event.id === updatedEvent.id ? updatedEvent : event);
+      }
     }
   }
 
   function previousDay() {
-    currentDate.setDate(currentDate.getDate() - 1);
-    currentDate = currentDate;
-    renderScheduler();
+    currentDate = new Date(currentDate.getTime() - 24 * 60 * 60 * 1000);
   }
 
   function nextDay() {
-    currentDate.setDate(currentDate.getDate() + 1);
-    currentDate = currentDate;
-    renderScheduler();
+    currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
+  }
+
+  let currentTimePosition;
+
+  function getCurrentTimePosition() {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTime = currentHour + currentMinute / 60;
+    return Math.max(0, (currentTime - startHour) * 80);
+  }
+
+  function updateCurrentTimePosition() {
+    currentTimePosition = getCurrentTimePosition();
   }
 
   onMount(() => {
-    renderScheduler();
+    updateCurrentTimePosition();
+    const interval = setInterval(updateCurrentTimePosition, 60000); // Update every minute
+    return () => clearInterval(interval);
   });
 </script>
 
@@ -134,87 +172,125 @@
     <span>{formattedDate}</span>
     <button on:click={nextDay}>&gt;</button>
   </div>
-  <div class="planner-container" bind:this={schedulerElement}></div>
+  <div class="planner-container">
+    <div class="scheduler-resources">
+      <div class="scheduler-resource">Resource</div>
+      {#each resources as resource}
+        <div class="scheduler-resource">{resource.name}</div>
+      {/each}
+    </div>
+    <div>
+      <div class="scheduler-header">
+        {#each timeSlots as time}
+          <div class="scheduler-time">{time}</div>
+        {/each}
+      </div>
+      <div class="scheduler-events">
+        {#each resources as resource}
+          <div class="scheduler-row">
+            {#each timeSlots as time}
+              <div 
+                class="scheduler-cell"
+                on:dragover={onDragOver}
+                on:drop={(e) => onDrop(resource.id, time, e)}
+              ></div>
+            {/each}
+            {#each visibleEvents.filter(event => event.resourceId === resource.id) as event (event.id)}
+              <div 
+                class="scheduler-event"
+                style="left: {event.left}px; width: {event.width}px;"
+                draggable="true"
+                on:mousedown={(e) => onEventMouseDown(event, e)}
+                on:dragstart={(e) => onDragStart(event, e)}
+              >
+                <div class="resize-handle left"></div>
+                <div class="event-content">{event.title}</div>
+                <div class="resize-handle right"></div>
+              </div>
+            {/each}
+          </div>
+        {/each}
+
+        <div class="current-time-indicator" style="left: {currentTimePosition}px;"></div>
+
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
   .day-planner {
     font-family: Arial, sans-serif;
     margin: 20px;
-  }
-
-  .planner-controls {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 10px;
-  }
-
-  .planner-controls button {
-    margin: 0 5px;
-    padding: 5px 10px;
-    font-size: 16px;
+    color: #000;
   }
 
   .planner-container {
+    display: flex;
     border: 1px solid #ccc;
-    overflow-x: auto;
+    overflow: auto;
   }
 
-  :global(.scheduler-header) {
+  .scheduler-resources {
+    width: 100px;
+    border-right: 1px solid #ccc;
+    background-color: #f0f0f0;
+    z-index: 1;
+  }
+
+  .scheduler-resource {
+    height: 40px;
+    border-bottom: 1px solid #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+  }
+
+  .scheduler-header {
     display: flex;
     border-bottom: 1px solid #ccc;
     position: sticky;
     top: 0;
     background-color: #f0f0f0;
-    z-index: 1;
-  }
-
-  :global(.scheduler-time-column) {
-    width: 60px;
-    border-right: 1px solid #ccc;
-    font-weight: bold;
-    text-align: center;
-    padding: 5px;
-  }
-
-  :global(.scheduler-resource) {
+    z-index: 2;
     flex: 1;
-    text-align: center;
-    padding: 5px;
+  }
+
+  .scheduler-time {
+    width: 40px; /* Match the width of scheduler-cell */
+    height: 40px; /* Match the height of scheduler-resource */
     border-right: 1px solid #ccc;
-    font-weight: bold;
-  }
-
-  :global(.scheduler-body) {
+    font-size: 12px;
+    text-align: center;
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: start;
   }
 
-  :global(.scheduler-row) {
+  .scheduler-events {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+  }
+
+  .scheduler-row {
     display: flex;
     border-bottom: 1px solid #eee;
     height: 40px;
+    position: relative;
   }
 
-  :global(.scheduler-time) {
-    width: 60px;
-    padding: 5px;
-    border-right: 1px solid #ccc;
-    font-size: 12px;
-    text-align: right;
-  }
-
-  :global(.scheduler-cell) {
-    flex: 1;
+  .scheduler-cell {
+    width: 40px; /* Match the width of scheduler-time */
     border-right: 1px solid #eee;
     position: relative;
   }
 
-  :global(.scheduler-event) {
+  .scheduler-event {
     position: absolute;
-    left: 0;
-    right: 0;
+    top: 0;
+    bottom: 0;
     background-color: #3498db;
     color: white;
     padding: 2px;
@@ -223,5 +299,39 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     cursor: move;
+    display: flex;
+    align-items: center;
+  }
+
+  .event-content {
+    flex-grow: 1;
+    text-align: center;
+  }
+
+  .resize-handle {
+    width: 5px;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    background-color: rgba(0, 0, 0, 0.2);
+    cursor: ew-resize;
+  }
+
+  .resize-handle.left {
+    left: 0;
+  }
+
+  .resize-handle.right {
+    right: 0;
+  }
+
+  .current-time-indicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: red;
+    z-index: 3;
+    pointer-events: none;
   }
 </style>
