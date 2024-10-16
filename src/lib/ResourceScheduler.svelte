@@ -18,20 +18,26 @@
     const intervals = (endHour - startHour) * 2;
 
     let html = `<div class="scheduler-header">
-      <div class="scheduler-time-column">Time</div>
-      ${resources.map(resource => `<div class="scheduler-resource">${resource.name}</div>`).join('')}
+      <div class="scheduler-time-column">Resource</div>
+      ${Array.from({ length: intervals }, (_, i) => {
+        const hour = Math.floor(i / 2) + startHour;
+        const minute = i % 2 === 0 ? '00' : '30';
+        return `<div class="scheduler-time">${hour.toString().padStart(2, '0')}:${minute}</div>`;
+      }).join('')}
     </div>`;
 
     html += '<div class="scheduler-body">';
 
-    for (let i = 0; i < intervals; i++) {
-      const hour = Math.floor(i / 2) + startHour;
-      const minute = i % 2 === 0 ? '00' : '30';
+    resources.forEach(resource => {
       html += `<div class="scheduler-row">
-        <div class="scheduler-time">${hour.toString().padStart(2, '0')}:${minute}</div>
-        ${resources.map(resource => `<div class="scheduler-cell" data-resource="${resource.id}" data-time="${hour}:${minute}"></div>`).join('')}
-      </div>`;
-    }
+        <div class="scheduler-resource">${resource.name}</div>`;
+      for (let i = 0; i < intervals; i++) {
+        const hour = Math.floor(i / 2) + startHour;
+        const minute = i % 2 === 0 ? '00' : '30';
+        html += `<div class="scheduler-cell" data-resource="${resource.id}" data-time="${hour}:${minute}"></div>`;
+      }
+      html += '</div>';
+    });
 
     html += '</div>';
 
@@ -42,14 +48,14 @@
       const endDate = new Date(event.end);
       const startTime = startDate.getHours() + startDate.getMinutes() / 60;
       const endTime = endDate.getHours() + endDate.getMinutes() / 60;
-      
+
       if (startTime >= startHour && startTime < endHour) {
         const cell = schedulerElement.querySelector(`.scheduler-cell[data-resource="${event.resourceId}"][data-time="${Math.floor(startTime)}:${startTime % 1 === 0 ? '00' : '30'}"]`);
-        
+
         if (cell) {
           const eventElement = document.createElement('div');
           eventElement.className = 'scheduler-event';
-          eventElement.style.height = `${(endTime - startTime) * 80}px`;
+          eventElement.style.width = `${(endTime - startTime) * 80}px`;
           eventElement.textContent = event.title;
           eventElement.draggable = true;
           eventElement.setAttribute('data-event-id', event.id);
@@ -81,16 +87,16 @@
     e.preventDefault();
     const eventId = parseInt(e.dataTransfer.getData('text'));
     const targetCell = e.target.closest('.scheduler-cell');
-    
+
     if (targetCell && draggedEvent) {
       const newResourceId = parseInt(targetCell.getAttribute('data-resource'));
       const [newHour, newMinute] = targetCell.getAttribute('data-time').split(':');
-      
+
       const newStartDate = new Date(draggedEvent.start);
       newStartDate.setHours(parseInt(newHour));
       newStartDate.setMinutes(parseInt(newMinute));
-      
-      const duration = new Date(draggedEvent.end) - new Date(draggedEvent.start);
+
+      const duration = new Date(draggedEvent.end).getTime() - new Date(draggedEvent.start).getTime();
       const newEndDate = new Date(newStartDate.getTime() + duration);
 
       const updatedEvent = {
