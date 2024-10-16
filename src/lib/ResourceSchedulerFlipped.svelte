@@ -221,6 +221,10 @@
     color: #000;
   }
 
+  .planner-controls {
+    margin-bottom: 0.5rem;
+  }
+
   .planner-container {
     display: flex;
     border: 1px solid #ccc;
@@ -331,5 +335,18 @@
     background-color: red;
     z-index: 3;
     pointer-events: none;
+  }
+
+  button {
+    border-radius: 4px;
+    border: 1px solid blue;
+    padding: 0.3em 0.5em;
+    font-size: 1em;
+    font-weight: 500;
+    font-family: inherit;
+    background-color: white;
+    cursor: pointer;
+    transition: border-color 0.25s;
+    color: blue;
   }
 </style>
