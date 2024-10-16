@@ -48,54 +48,54 @@
       return { ...event, left, width };
     });
 
-  function onEventMouseDown(event, e) {
-    if (e.target.classList.contains('resize-handle')) {
-      e.preventDefault();
-      e.stopPropagation();
-      resizingEvent = event;
-      resizeDirection = e.target.classList.contains('left') ? 'left' : 'right';
-      initialX = e.clientX;
-      document.addEventListener('mousemove', onResize);
-      document.addEventListener('mouseup', onResizeEnd);
-    }
+    function onEventMouseDown(event, e) {
+  if (e.target.classList.contains('resize-handle')) {
+    e.preventDefault();
+    e.stopPropagation();
+    resizingEvent = event;
+    resizeDirection = e.target.classList.contains('left') ? 'left' : 'right';
+    initialX = e.clientX;
+    document.addEventListener('mousemove', onResize);
+    document.addEventListener('mouseup', onResizeEnd);
+  }
+}
+
+function onResize(e) {
+  if (!resizingEvent) return;
+
+  const delta = e.clientX - initialX;
+  const cellWidth = 40; // 30 minutes = 40px
+  const timeChange = Math.round(delta / cellWidth) * 30 * 60 * 1000; // Convert to milliseconds
+
+  let newStart = new Date(resizingEvent.start);
+  let newEnd = new Date(resizingEvent.end);
+
+  if (resizeDirection === 'left') {
+    newStart = new Date(new Date(resizingEvent.start).getTime() + timeChange);
+    newStart.setHours(Math.max(newStart.getHours(), startHour), newStart.getMinutes());
+  } else {
+    newEnd = new Date(new Date(resizingEvent.end).getTime() + timeChange);
+    newEnd.setHours(Math.min(newEnd.getHours(), endHour), newEnd.getMinutes());
   }
 
-  function onResize(e) {
-    if (!resizingEvent) return;
-
-    const delta = e.clientX - initialX;
-    const cellWidth = 40; // 30 minutes = 40px
-    const timeChange = Math.round(delta / cellWidth) * 30 * 60 * 1000; // Convert to milliseconds
-
-    let newStart = new Date(resizingEvent.start);
-    let newEnd = new Date(resizingEvent.end);
-
-    if (resizeDirection === 'left') {
-      newStart = new Date(newStart.getTime() + timeChange);
-      newStart.setHours(Math.max(newStart.getHours(), startHour), newStart.getMinutes());
-    } else {
-      newEnd = new Date(newEnd.getTime() + timeChange);
-      newEnd.setHours(Math.min(newEnd.getHours(), endHour), newEnd.getMinutes());
-    }
-
-    // Ensure the event duration is at least 30 minutes
-    if (newEnd.getTime() - newStart.getTime() >= 30 * 60 * 1000) {
-      const updatedEvent = {
-        ...resizingEvent,
-        start: newStart.toISOString(),
-        end: newEnd.toISOString()
-      };
-      events = events.map(event => event.id === updatedEvent.id ? updatedEvent : event);
-      initialX = e.clientX;
-    }
+  // Ensure the event duration is at least 30 minutes
+  if (newEnd.getTime() - newStart.getTime() >= 30 * 60 * 1000) {
+    const updatedEvent = {
+      ...resizingEvent,
+      start: newStart.toISOString(),
+      end: newEnd.toISOString()
+    };
+    events = events.map(event => event.id === updatedEvent.id ? updatedEvent : event);
+    // Do not update initialX here
   }
+}
 
-  function onResizeEnd() {
-    resizingEvent = null;
-    resizeDirection = null;
-    document.removeEventListener('mousemove', onResize);
-    document.removeEventListener('mouseup', onResizeEnd);
-  }
+function onResizeEnd() {
+  resizingEvent = null;
+  resizeDirection = null;
+  document.removeEventListener('mousemove', onResize);
+  document.removeEventListener('mouseup', onResizeEnd);
+}
 
   function onDragStart(event, e) {
     if (e.target.classList.contains('resize-handle')) {
