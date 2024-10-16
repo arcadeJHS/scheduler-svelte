@@ -41,8 +41,8 @@
       const startTime = (startDate.getHours() - startHour) * 2 + startDate.getMinutes() / 30;
       const endTime = (endDate.getHours() - startHour) * 2 + endDate.getMinutes() / 30;
 
-      const top = Math.max(0, startTime * 40); // 30 minutes = 40px
-      const height = Math.max(0, (endTime - startTime) * 40);
+      const top = Math.max(0, startTime * 41); // 30 minutes = 41px (including 1px border)
+      const height = Math.max(0, (endTime - startTime) * 41 - 1); // Subtract 1px to account for the bottom border
 
       return { ...event, top, height };
     });
@@ -63,7 +63,7 @@
     if (!resizingEvent) return;
 
     const delta = e.clientY - initialY;
-    const cellHeight = 40; // 30 minutes = 40px
+    const cellHeight = 41; // 30 minutes = 41px (including 1px border)
     const timeChange = Math.round(delta / cellHeight) * 30 * 60 * 1000; // Convert to milliseconds
 
     let newStart = new Date(resizingEvent.start);
@@ -150,7 +150,7 @@
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const currentTime = currentHour + currentMinute / 60;
-    return Math.max(0, (currentTime - startHour) * 80);
+    return Math.max(0, (currentTime - startHour) * 82); // 82px for 1 hour (2 cells)
   }
 
   function updateCurrentTimePosition() {
@@ -198,7 +198,7 @@
         {#each visibleEvents as event (event.id)}
           <div 
             class="scheduler-event"
-            style="top: {event.top}px; height: {event.height}px; left: {resources.findIndex(r => r.id === event.resourceId) * 100}px;"
+            style="top: {event.top}px; height: {event.height}px; left: {resources.findIndex(r => r.id === event.resourceId) * 101}px;"
             draggable="true"
             on:mousedown={(e) => onEventMouseDown(event, e)}
             on:dragstart={(e) => onDragStart(event, e)}
@@ -286,8 +286,6 @@
 
   .scheduler-event {
     position: absolute;
-    left: 0;
-    right: 0;
     background-color: #3498db;
     color: white;
     padding: 2px;
@@ -300,6 +298,7 @@
     flex-direction: column;
     align-items: center;
     width: 98px;
+    border-radius: 4px;
   }
 
   .event-content {

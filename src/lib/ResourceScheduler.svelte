@@ -19,7 +19,6 @@
     month: 'long', 
     day: 'numeric', 
     year: 'numeric'
-    // Removed timeZone: 'UTC'
   });
 
   $: timeSlots = Array.from({ length: intervals }, (_, i) => {
@@ -42,60 +41,60 @@
       const startTime = (startDate.getHours() - startHour) * 2 + startDate.getMinutes() / 30;
       const endTime = (endDate.getHours() - startHour) * 2 + endDate.getMinutes() / 30;
 
-      const left = Math.max(0, startTime * 40); // 30 minutes = 40px
-      const width = Math.max(0, (endTime - startTime) * 40);
+      // Adjust the left position calculation
+      const left = startTime * 41; // 41px to account for the 1px border
+      const width = (endTime - startTime) * 41 - 1; // Subtract 1px to account for the right border
 
       return { ...event, left, width };
     });
 
-    function onEventMouseDown(event, e) {
-  if (e.target.classList.contains('resize-handle')) {
-    e.preventDefault();
-    e.stopPropagation();
-    resizingEvent = event;
-    resizeDirection = e.target.classList.contains('left') ? 'left' : 'right';
-    initialX = e.clientX;
-    document.addEventListener('mousemove', onResize);
-    document.addEventListener('mouseup', onResizeEnd);
-  }
-}
-
-function onResize(e) {
-  if (!resizingEvent) return;
-
-  const delta = e.clientX - initialX;
-  const cellWidth = 40; // 30 minutes = 40px
-  const timeChange = Math.round(delta / cellWidth) * 30 * 60 * 1000; // Convert to milliseconds
-
-  let newStart = new Date(resizingEvent.start);
-  let newEnd = new Date(resizingEvent.end);
-
-  if (resizeDirection === 'left') {
-    newStart = new Date(new Date(resizingEvent.start).getTime() + timeChange);
-    newStart.setHours(Math.max(newStart.getHours(), startHour), newStart.getMinutes());
-  } else {
-    newEnd = new Date(new Date(resizingEvent.end).getTime() + timeChange);
-    newEnd.setHours(Math.min(newEnd.getHours(), endHour), newEnd.getMinutes());
+  function onEventMouseDown(event, e) {
+    if (e.target.classList.contains('resize-handle')) {
+      e.preventDefault();
+      e.stopPropagation();
+      resizingEvent = event;
+      resizeDirection = e.target.classList.contains('left') ? 'left' : 'right';
+      initialX = e.clientX;
+      document.addEventListener('mousemove', onResize);
+      document.addEventListener('mouseup', onResizeEnd);
+    }
   }
 
-  // Ensure the event duration is at least 30 minutes
-  if (newEnd.getTime() - newStart.getTime() >= 30 * 60 * 1000) {
-    const updatedEvent = {
-      ...resizingEvent,
-      start: newStart.toISOString(),
-      end: newEnd.toISOString()
-    };
-    events = events.map(event => event.id === updatedEvent.id ? updatedEvent : event);
-    // Do not update initialX here
-  }
-}
+  function onResize(e) {
+    if (!resizingEvent) return;
 
-function onResizeEnd() {
-  resizingEvent = null;
-  resizeDirection = null;
-  document.removeEventListener('mousemove', onResize);
-  document.removeEventListener('mouseup', onResizeEnd);
-}
+    const delta = e.clientX - initialX;
+    const cellWidth = 41; // 30 minutes = 41px (including border)
+    const timeChange = Math.round(delta / cellWidth) * 30 * 60 * 1000; // Convert to milliseconds
+
+    let newStart = new Date(resizingEvent.start);
+    let newEnd = new Date(resizingEvent.end);
+
+    if (resizeDirection === 'left') {
+      newStart = new Date(new Date(resizingEvent.start).getTime() + timeChange);
+      newStart.setHours(Math.max(newStart.getHours(), startHour), newStart.getMinutes());
+    } else {
+      newEnd = new Date(new Date(resizingEvent.end).getTime() + timeChange);
+      newEnd.setHours(Math.min(newEnd.getHours(), endHour), newEnd.getMinutes());
+    }
+
+    // Ensure the event duration is at least 30 minutes
+    if (newEnd.getTime() - newStart.getTime() >= 30 * 60 * 1000) {
+      const updatedEvent = {
+        ...resizingEvent,
+        start: newStart.toISOString(),
+        end: newEnd.toISOString()
+      };
+      events = events.map(event => event.id === updatedEvent.id ? updatedEvent : event);
+    }
+  }
+
+  function onResizeEnd() {
+    resizingEvent = null;
+    resizeDirection = null;
+    document.removeEventListener('mousemove', onResize);
+    document.removeEventListener('mouseup', onResizeEnd);
+  }
 
   function onDragStart(event, e) {
     if (e.target.classList.contains('resize-handle')) {
@@ -152,7 +151,7 @@ function onResizeEnd() {
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const currentTime = currentHour + currentMinute / 60;
-    return Math.max(0, (currentTime - startHour) * 80);
+    return Math.max(0, (currentTime - startHour) * 82); // 82px for 1 hour (2 cells)
   }
 
   function updateCurrentTimePosition() {
@@ -179,7 +178,7 @@ function onResizeEnd() {
         <div class="scheduler-resource">{resource.name}</div>
       {/each}
     </div>
-    <div>
+    <div class="scheduler-content">
       <div class="scheduler-header">
         {#each timeSlots as time}
           <div class="scheduler-time">{time}</div>
@@ -228,7 +227,7 @@ function onResizeEnd() {
   .planner-container {
     display: flex;
     border: 1px solid #ccc;
-    overflow: auto;
+    overflow: hidden;
   }
 
   .scheduler-resources {
@@ -247,6 +246,11 @@ function onResizeEnd() {
     font-weight: bold;
   }
 
+  .scheduler-content {
+    flex: 1;
+    overflow-x: auto;
+  }
+
   .scheduler-header {
     display: flex;
     border-bottom: 1px solid #ccc;
@@ -254,23 +258,21 @@ function onResizeEnd() {
     top: 0;
     background-color: #f0f0f0;
     z-index: 2;
-    flex: 1;
   }
 
   .scheduler-time {
-    width: 40px; /* Match the width of scheduler-cell */
-    height: 40px; /* Match the height of scheduler-resource */
+    width: 40px;
+    height: 40px;
     border-right: 1px solid #ccc;
     font-size: 12px;
     text-align: center;
     display: flex;
     align-items: center;
-    justify-content: start;
+    justify-content: center;
+    flex-shrink: 0;
   }
 
   .scheduler-events {
-    flex: 1;
-    overflow: auto;
     position: relative;
   }
 
@@ -282,15 +284,16 @@ function onResizeEnd() {
   }
 
   .scheduler-cell {
-    width: 40px; /* Match the width of scheduler-time */
+    width: 40px;
+    height: 40px;
     border-right: 1px solid #eee;
-    position: relative;
+    flex-shrink: 0;
   }
 
   .scheduler-event {
     position: absolute;
-    top: 0;
-    bottom: 0;
+    top: 2px;
+    bottom: 2px;
     background-color: #3498db;
     color: white;
     padding: 2px;
@@ -301,6 +304,7 @@ function onResizeEnd() {
     cursor: move;
     display: flex;
     align-items: center;
+    border-radius: 4px;
   }
 
   .event-content {
