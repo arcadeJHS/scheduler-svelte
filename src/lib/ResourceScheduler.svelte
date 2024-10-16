@@ -309,6 +309,7 @@
     display: flex;
     align-items: center;
     border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
   }
 
   .event-content {
