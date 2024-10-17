@@ -41,8 +41,8 @@
       const startTime = (startDate.getHours() - startHour) * 2 + startDate.getMinutes() / 30;
       const endTime = (endDate.getHours() - startHour) * 2 + endDate.getMinutes() / 30;
 
-      const top = Math.max(0, startTime * 41); // 30 minutes = 41px (including 1px border)
-      const height = Math.max(0, (endTime - startTime) * 41 - 1); // Subtract 1px to account for the bottom border
+      const top = Math.max(0, startTime * 31); // 30 minutes = 31px (including 1px border)
+      const height = Math.max(0, (endTime - startTime) * 31 - 1); // Subtract 1px to account for the bottom border
 
       return { ...event, top, height };
     });
@@ -150,7 +150,7 @@
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const currentTime = currentHour + currentMinute / 60;
-    return Math.max(0, (currentTime - startHour) * 82); // 82px for 1 hour (2 cells)
+    return Math.max(0, (currentTime - startHour) * 62); // 62px for 1 hour (2 cells * 30px + 2px border)
   }
 
   function updateCurrentTimePosition() {
@@ -172,9 +172,11 @@
   </div>
   <div class="planner-container">
     <div class="scheduler-times">
-      <div class="scheduler-time-header">Time</div>
+      <div class="scheduler-time-header"></div>
       {#each timeSlots as time}
-        <div class="scheduler-time">{time}</div>
+        <div class="scheduler-time">
+          <span>{time}</span>
+        </div>
       {/each}
     </div>
     <div class="scheduler-content">
@@ -186,9 +188,9 @@
       <div class="scheduler-events">
         {#each timeSlots as time}
           <div class="scheduler-row">
-            {#each resources as resource}
+            {#each resources as resource, index}
               <div 
-                class="scheduler-cell"
+                class="scheduler-cell {index % 2 === 0 ? 'scheduler-cell-even' : 'scheduler-cell-odd'}"
                 on:dragover={onDragOver}
                 on:drop={(e) => onDrop(resource.id, time, e)}
               ></div>
@@ -219,6 +221,10 @@
     font-family: Arial, sans-serif;
     margin: 20px;
     color: #000;
+    line-height: 1.5;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   .planner-controls {
@@ -229,6 +235,7 @@
     display: flex;
     border: 1px solid #ccc;
     overflow: auto;
+    width: fit-content;
   }
 
   .scheduler-times {
@@ -239,12 +246,20 @@
   }
 
   .scheduler-time-header, .scheduler-time {
-    height: 40px;
-    border-bottom: 1px solid #ccc;
+    height: 30px;
+    border-bottom: 1px dashed #ddd;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
+    align-items: top;
+    justify-content: end;
+    font-size: 12px;
+  }
+
+  .scheduler-time-header {
+    height: 40px;
+  }
+
+  .scheduler-time span {
+    padding-right: 0.1rem;
   }
 
   .scheduler-content {
@@ -259,13 +274,14 @@
     top: 0;
     background-color: #f0f0f0;
     z-index: 2;
+    width: fit-content;
   }
 
   .scheduler-resource {
     width: 100px;
     height: 40px;
     border-right: 1px solid #ccc;
-    font-size: 12px;
+    font-weight: bold;
     text-align: center;
     display: flex;
     align-items: center;
@@ -274,12 +290,13 @@
 
   .scheduler-events {
     position: relative;
+    width: fit-content;
   }
 
   .scheduler-row {
     display: flex;
-    border-bottom: 1px solid #eee;
-    height: 40px;
+    border-bottom: 1px dashed #e5e5e5;
+    height: 30px;
   }
 
   .scheduler-cell {
@@ -288,15 +305,16 @@
     position: relative;
   }
 
+  .scheduler-row .scheduler-cell-odd {
+    background-color: #f5f5f5;
+  }
+
   .scheduler-event {
     position: absolute;
     background-color: #3498db;
     color: white;
-    padding: 2px;
+    padding: 0.4rem 0.2rem;
     font-size: 12px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
     cursor: move;
     display: flex;
     flex-direction: column;
@@ -304,11 +322,14 @@
     width: 98px;
     border-radius: 4px;
     border: 1px solid rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
   }
 
   .event-content {
+    width: 100%;
+    height: 100%;
     flex-grow: 1;
-    text-align: center;
+    text-align: left;
   }
 
   .resize-handle {

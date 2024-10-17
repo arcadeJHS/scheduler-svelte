@@ -151,7 +151,7 @@
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const currentTime = currentHour + currentMinute / 60;
-    return Math.max(0, (currentTime - startHour) * 82); // 82px for 1 hour (2 cells)
+    return Math.max(0, (currentTime - startHour) * 82); // 82px for 1 hour (2 cells * 40px + 2px border)
   }
 
   function updateCurrentTimePosition() {
@@ -173,7 +173,7 @@
   </div>
   <div class="planner-container">
     <div class="scheduler-resources">
-      <div class="scheduler-resource">Resource</div>
+      <div class="scheduler-resource"></div>
       {#each resources as resource}
         <div class="scheduler-resource">{resource.name}</div>
       {/each}
@@ -181,12 +181,14 @@
     <div class="scheduler-content">
       <div class="scheduler-header">
         {#each timeSlots as time}
-          <div class="scheduler-time">{time}</div>
+          <div class="scheduler-time">
+            <span>{time}</span>
+          </div>
         {/each}
       </div>
       <div class="scheduler-events">
-        {#each resources as resource}
-          <div class="scheduler-row">
+        {#each resources as resource, index}
+          <div class="scheduler-row {index % 2 === 0 ? 'scheduler-row-even' : 'scheduler-row-odd'}">
             {#each timeSlots as time}
               <div 
                 class="scheduler-cell"
@@ -222,6 +224,10 @@
     font-family: Arial, sans-serif;
     margin: 20px;
     color: #000;
+    line-height: 1.5;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   .planner-controls {
@@ -231,7 +237,8 @@
   .planner-container {
     display: flex;
     border: 1px solid #ccc;
-    overflow: hidden;
+    overflow: auto;
+    width: fit-content;
   }
 
   .scheduler-resources {
@@ -250,6 +257,10 @@
     font-weight: bold;
   }
 
+  .scheduler-resource:first-child {
+    height: 20px;
+  }
+
   .scheduler-content {
     flex: 1;
     overflow-x: auto;
@@ -262,22 +273,28 @@
     top: 0;
     background-color: #f0f0f0;
     z-index: 2;
+    width: fit-content;
   }
 
   .scheduler-time {
     width: 40px;
-    height: 40px;
-    border-right: 1px solid #ccc;
+    height: 20px;
+    border-right: 1px dashed #ddd;
     font-size: 12px;
     text-align: center;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    align-items: end;
+    justify-content: start;
     flex-shrink: 0;
+  }
+
+  .scheduler-time span {
+    padding-left: 1px;
   }
 
   .scheduler-events {
     position: relative;
+    width: fit-content;
   }
 
   .scheduler-row {
@@ -287,10 +304,14 @@
     position: relative;
   }
 
+  .scheduler-row.scheduler-row-odd {
+    background-color: #f5f5f5;
+  }
+
   .scheduler-cell {
     width: 40px;
     height: 40px;
-    border-right: 1px solid #eee;
+    border-right: 1px dashed #e5e5e5;
     flex-shrink: 0;
   }
 
@@ -300,7 +321,7 @@
     bottom: 2px;
     background-color: #3498db;
     color: white;
-    padding: 2px;
+    padding: 0.1rem 0.5rem;
     font-size: 12px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -310,11 +331,20 @@
     align-items: center;
     border-radius: 4px;
     border: 1px solid rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
   }
 
   .event-content {
+    width: 100%;
+    height: 100%;
     flex-grow: 1;
-    text-align: center;
+    text-align: left;
+
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: calc(100% - 0.8rem);
   }
 
   .resize-handle {
