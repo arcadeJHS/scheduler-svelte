@@ -4,7 +4,7 @@
   export let resources = [];
   export let events = [];
 
-  let currentDate = new Date(2023, 9, 16); // Use local time
+  let currentDate = new Date(); // Use local time
   let draggedEvent = null;
   let resizingEvent = null;
   let resizeDirection = null;

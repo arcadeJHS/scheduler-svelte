@@ -10,10 +10,10 @@
   ];
 
   const events = [
-    { id: 1, resourceId: 1, title: 'Task 1', start: '2023-10-16T09:00:00', end: '2023-10-16T10:30:00' },
-    { id: 2, resourceId: 2, title: 'Task 2 one one one', start: '2023-10-16T13:00:00', end: '2023-10-16T14:00:00' },
-    { id: 3, resourceId: 3, title: 'Task 3', start: '2023-10-16T11:00:00', end: '2023-10-16T15:00:00' },
-    { id: 4, resourceId: 4, title: 'Task 4', start: '2023-10-16T12:00:00', end: '2023-10-16T13:00:00' },
+    { id: 1, resourceId: 1, title: 'Task 1', start: '2024-10-17T09:00:00', end: '2024-10-17T10:30:00' },
+    { id: 2, resourceId: 2, title: 'Task 2 one one one', start: '2024-10-17T13:00:00', end: '2024-10-17T14:00:00' },
+    { id: 3, resourceId: 3, title: 'Task 3', start: '2024-10-17T11:00:00', end: '2024-10-17T15:00:00' },
+    { id: 4, resourceId: 4, title: 'Task 4', start: '2024-10-17T12:00:00', end: '2024-10-17T13:00:00' },
   ];
 </script>
 
